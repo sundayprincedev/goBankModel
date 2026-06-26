@@ -1,0 +1,158 @@
+{
+  "exchange_rates": {
+    "USD": {
+      "NGN": 1600.5,
+      "GBP": 0.79,
+      "EUR": 0.92,
+      "JPY": 149.5,
+      "CAD": 1.36,
+      "AUD": 1.53,
+      "USD": 1.0
+    },
+    "NGN": {
+      "USD": 0.000625,
+      "GBP": 0.000494,
+      "EUR": 0.000575,
+      "JPY": 0.0934,
+      "CAD": 0.00085,
+      "AUD": 0.000956,
+      "NGN": 1.0
+    },
+    "GBP": {
+      "USD": 1.27,
+      "NGN": 2025.0,
+      "EUR": 1.17,
+      "JPY": 189.5,
+      "CAD": 1.72,
+      "AUD": 1.94,
+      "GBP": 1.0
+    },
+    "EUR": {
+      "USD": 1.09,
+      "NGN": 1740.0,
+      "GBP": 0.86,
+      "JPY": 162.3,
+      "CAD": 1.48,
+      "AUD": 1.67,
+      "EUR": 1.0
+    }
+  },
+  "customers": [
+    {
+      "customer_id": "CUST-001",
+      "name": "Emeka Okafor",
+      "accounts": [
+        {
+          "account_id": "ACC-001",
+          "type": "savings",
+          "currency": "NGN",
+          "balance": 250000.0,
+          "interest_rate": 0.045
+        },
+        {
+          "account_id": "ACC-002",
+          "type": "current",
+          "currency": "NGN",
+          "balance": 180000.0,
+          "overdraft_limit": 50000.0
+        }
+      ]
+    },
+    {
+      "customer_id": "CUST-002",
+      "name": "Anya Petrova",
+      "accounts": [
+        {
+          "account_id": "ACC-003",
+          "type": "savings",
+          "currency": "USD",
+          "balance": 4500.0,
+          "interest_rate": 0.032
+        },
+        {
+          "account_id": "ACC-004",
+          "type": "current",
+          "currency": "USD",
+          "balance": 12000.0,
+          "overdraft_limit": 5000.0
+        }
+      ]
+    },
+    {
+      "customer_id": "CUST-003",
+      "name": "James Whitfield",
+      "accounts": [
+        {
+          "account_id": "ACC-005",
+          "type": "savings",
+          "currency": "GBP",
+          "balance": 8000.0,
+          "interest_rate": 0.038
+        },
+        {
+          "account_id": "ACC-006",
+          "type": "current",
+          "currency": "GBP",
+          "balance": 3500.0,
+          "overdraft_limit": 2000.0
+        }
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "type": "deposit",
+      "account_id": "ACC-001",
+      "amount": 50000.0
+    },
+    {
+      "type": "withdraw",
+      "account_id": "ACC-003",
+      "amount": 500.0
+    },
+    {
+      "type": "transfer",
+      "from_account_id": "ACC-002",
+      "to_account_id": "ACC-004",
+      "amount": 10000.0,
+      "note": "same currency NGN to NGN - no conversion"
+    },
+    {
+      "type": "transfer",
+      "from_account_id": "ACC-004",
+      "to_account_id": "ACC-006",
+      "amount": 1000.0,
+      "note": "cross currency USD to GBP - conversion applies"
+    },
+    {
+      "type": "apply_interest",
+      "account_id": "ACC-001"
+    },
+    {
+      "type": "apply_interest",
+      "account_id": "ACC-003"
+    },
+    {
+      "type": "withdraw",
+      "account_id": "ACC-005",
+      "amount": 999999.0,
+      "note": "triggers failed attempts sequence"
+    },
+    {
+      "type": "withdraw",
+      "account_id": "ACC-005",
+      "amount": 999999.0
+    },
+    {
+      "type": "withdraw",
+      "account_id": "ACC-005",
+      "amount": 999999.0
+    },
+    {
+      "type": "withdraw",
+      "account_id": "ACC-005",
+      "amount": 999999.0,
+      "note": "4th attempt - account locks here"
+    }
+  ]
+}
