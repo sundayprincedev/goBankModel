@@ -28,6 +28,9 @@ func (s *SavingsAccount) Deposit(amount float64) (methodResponse, error) {
 		return methodResponse{}, ErrInvalidAmount
 	}
 
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.IsLocked {
 		return methodResponse{}, &AccountLockedError{
 			AccountID: s.AccountID,
@@ -45,6 +48,9 @@ func (s *SavingsAccount) Withdraw(amount float64) (methodResponse, error) {
 	if amount <= 0 {
 		return methodResponse{}, ErrInvalidAmount
 	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if s.IsLocked {
 		return methodResponse{}, &AccountLockedError{
@@ -80,6 +86,10 @@ func (s *SavingsAccount) Withdraw(amount float64) (methodResponse, error) {
 }
 
 func (s *SavingsAccount) ApplyDailyInterest() (methodResponse, error) {
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.IsLocked {
 		return methodResponse{}, &AccountLockedError{
 			AccountID: s.AccountID,

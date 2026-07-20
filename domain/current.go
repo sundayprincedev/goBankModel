@@ -30,6 +30,9 @@ func (c *CurrentAccount) Deposit(amount float64) (methodResponse, error) {
 		return methodResponse{}, ErrInvalidAmount
 	}
 
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if c.IsLocked {
 		return methodResponse{}, &AccountLockedError{
 			AccountID: c.AccountID,
@@ -47,6 +50,10 @@ func (c *CurrentAccount) Withdraw(amount float64) (methodResponse, error) {
 	if amount <= 0 {
 		return methodResponse{}, ErrInvalidAmount
 	}
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if c.IsLocked {
 		return methodResponse{}, &AccountLockedError{
 			AccountID: c.AccountID,
@@ -84,6 +91,10 @@ func (c *CurrentAccount) Transfer(
 	if amount <= 0 {
 		return methodResponse{}, ErrInvalidAmount
 	}
+
+	lockInOrder(&c.Account, &to.Account)
+	defer unlockInOrder(&c.Account, &to.Account)
+
 	if c.IsLocked {
 		return methodResponse{}, &TransferError{
 			FromID: c.AccountID,

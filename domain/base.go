@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"gobanksystem/currency"
+	"sync"
 )
 
 type AuditLogs []string
@@ -17,6 +18,7 @@ type BaseAccount struct {
 
 type Account struct {
 	BaseAccount
+	mu             sync.Mutex
 	Balance        int64
 	LockedReason   string
 	FailedAttempts int32
@@ -28,6 +30,7 @@ func (b *BaseAccount) Audit() []string {
 }
 
 func (a *Account) Lock(reason string) {
+	//No lock here because if mutex from higher scope already holds, redudant could cause deadlock.
 	a.IsLocked = true
 	a.LockedReason = reason
 	a.AuditLogs = append(a.AuditLogs, fmt.Sprintf("Account locked: %s", reason))
