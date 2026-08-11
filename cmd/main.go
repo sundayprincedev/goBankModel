@@ -21,6 +21,7 @@ func main() {
 		return
 	}
 
+	// transactionsLedger := domain.NewTransactionLedger()
 	savingsAccounts := make(map[string]*domain.SavingsAccount)
 	currentAccounts := make(map[string]*domain.CurrentAccount)
 

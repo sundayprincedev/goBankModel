@@ -3,6 +3,7 @@ package domain
 import (
 	"fmt"
 	"gobanksystem/currency"
+	"gobanksystem/util"
 	"sync"
 )
 
@@ -28,6 +29,8 @@ type Account struct {
 func (b *BaseAccount) Audit() []string {
 	return b.AuditLogs
 }
+
+type methodResponse = util.MethodResponse
 
 func (a *Account) Lock(reason string) {
 	//No lock here because if mutex from higher scope already holds, redudant could cause deadlock.

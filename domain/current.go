@@ -3,10 +3,7 @@ package domain
 import (
 	"fmt"
 	"gobanksystem/currency"
-	"gobanksystem/util"
 )
-
-type methodResponse = util.MethodResponse
 
 var normalizeAmountByFloor = currency.NormalizeAmountByFloor
 
