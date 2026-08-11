@@ -21,6 +21,14 @@ type SeedCustomer struct {
 	Accounts   []SeedAccount `json:"accounts"`
 }
 
+type SeedStaff struct {
+	StaffID       string `json:"staff_id"`
+	Name          string `json:"name"`
+	Position      string `json:"position"`
+	SalaryValue   int64  `json:"salary_value"`
+	BankAccountID string `json:"bank_account_id"`
+}
+
 type SeedOperation struct {
 	Type          string  `json:"type"`
 	AccountID     string  `json:"account_id"`
@@ -33,6 +41,7 @@ type SeedOperation struct {
 type SeedData struct {
 	ExchangeRates map[string]map[string]float64 `json:"exchange_rates"`
 	Customers     []SeedCustomer                `json:"customers"`
+	Staff         []SeedStaff                   `json:"staff"`
 	Operations    []SeedOperation               `json:"operations"`
 }
 

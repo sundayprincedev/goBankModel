@@ -99,6 +99,29 @@
       ]
     }
   ],
+  "staff": [
+    {
+      "staff_id": "STAFF-001",
+      "name": "Chidi Nwankwo",
+      "position": "Branch Manager",
+      "salary_value": 850000,
+      "bank_account_id": "ACC-002"
+    },
+    {
+      "staff_id": "STAFF-002",
+      "name": "Sarah Mitchell",
+      "position": "Senior Teller",
+      "salary_value": 420000,
+      "bank_account_id": "ACC-004"
+    },
+    {
+      "staff_id": "STAFF-003",
+      "name": "David Okonkwo",
+      "position": "Compliance Officer",
+      "salary_value": 600000,
+      "bank_account_id": "ACC-006"
+    }
+  ],
   "operations": [
     {
       "type": "deposit",

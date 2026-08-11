@@ -7,6 +7,7 @@ import (
 	"gobanksystem/data"
 	"gobanksystem/domain"
 	"gobanksystem/systems"
+	"gobanksystem/util"
 	"sync"
 	"time"
 )
@@ -21,15 +22,15 @@ func main() {
 		return
 	}
 
-	// transactionsLedger := domain.NewTransactionLedger()
-	savingsAccounts := make(map[string]*domain.SavingsAccount)
-	currentAccounts := make(map[string]*domain.CurrentAccount)
+	bank := domain.NewBank()
 
+	// Load customers and accounts into the bank
 	for _, seedCustomer := range seedData.Customers {
-		customer := domain.Customer{
+		customer := &domain.Customer{
 			Name:       seedCustomer.Name,
 			CustomerID: seedCustomer.CustomerID,
 		}
+		bank.Customers[seedCustomer.CustomerID] = customer
 
 		for _, seedAccount := range seedCustomer.Accounts {
 			curr, ok := currency.CurrencyExists(seedAccount.Currency)
@@ -40,7 +41,7 @@ func main() {
 			}
 
 			base := domain.BaseAccount{
-				Customer:     customer,
+				Customer:     *customer,
 				AccountID:    seedAccount.AccountID,
 				Currency:     curr,
 				CurrencyCode: seedAccount.Currency,
@@ -56,7 +57,7 @@ func main() {
 					},
 					InterestRate: seedAccount.InterestRate,
 				}
-				savingsAccounts[seedAccount.AccountID] = acc
+				bank.SavingsAccounts[seedAccount.AccountID] = acc
 
 			case "current":
 				acc := &domain.CurrentAccount{
@@ -66,9 +67,21 @@ func main() {
 					},
 					OverdraftLimit: currency.NormalizeAmountByRound(seedAccount.OverdraftLimit, curr),
 				}
-				currentAccounts[seedAccount.AccountID] = acc
+				bank.CurrentAccounts[seedAccount.AccountID] = acc
 			}
 		}
+	}
+
+	// Load staff into the bank
+	for _, seedStaff := range seedData.Staff {
+		staff := &domain.Staff{
+			StaffID:       seedStaff.StaffID,
+			Name:          seedStaff.Name,
+			Position:      seedStaff.Position,
+			SalaryValue:   seedStaff.SalaryValue,
+			BankAccountID: seedStaff.BankAccountID,
+		}
+		bank.Staff[seedStaff.StaffID] = staff
 	}
 
 	fmt.Println("═══════════════════════════════════")
@@ -85,74 +98,49 @@ func main() {
 			}
 			fmt.Println()
 
-			switch op.Type {
+			var resp util.MethodResponse
+			var opErr error
 
+			switch op.Type {
 			case "deposit":
 				time.Sleep(10 * time.Millisecond)
-				acc, ok := currentAccounts[op.AccountID]
-				if !ok {
-					sacc, ok := savingsAccounts[op.AccountID]
-					if !ok {
-						fmt.Printf("  Account %s not found\n", op.AccountID)
-						return
-					}
-					resp, err := sacc.Deposit(op.Amount)
-					printResult(resp.Message, err)
-					return
-				}
-				resp, err := acc.Deposit(op.Amount)
-				printResult(resp.Message, err)
+				resp, opErr = bank.Deposit(op.AccountID, op.Amount)
 
 			case "withdraw":
 				time.Sleep(10 * time.Millisecond)
-				acc, ok := currentAccounts[op.AccountID]
-				if !ok {
-					sacc, ok := savingsAccounts[op.AccountID]
-					if !ok {
-						fmt.Printf("  Account %s not found\n", op.AccountID)
-						return
-					}
-					resp, err := sacc.Withdraw(op.Amount)
-					printResult(resp.Message, err)
-					return
-				}
-				resp, err := acc.Withdraw(op.Amount)
-				printResult(resp.Message, err)
+				resp, opErr = bank.Withdraw(op.AccountID, op.Amount)
 
 			case "transfer":
 				time.Sleep(10 * time.Millisecond)
-				from, ok := currentAccounts[op.FromAccountID]
-				if !ok {
-					fmt.Printf("  From account %s not found\n", op.FromAccountID)
+				fromCode := ""
+				toCode := ""
+				if from, ok := bank.CurrentAccounts[op.FromAccountID]; ok {
+					fromCode = from.CurrencyCode
+				}
+				if to, ok := bank.CurrentAccounts[op.ToAccountID]; ok {
+					toCode = to.CurrencyCode
+				}
+				if fromCode == "" || toCode == "" {
+					printResult("Transfer failed", fmt.Errorf("account not found"))
 					return
 				}
-				to, ok := currentAccounts[op.ToAccountID]
-				if !ok {
-					fmt.Printf("  To account %s not found\n", op.ToAccountID)
-					return
-				}
-
-				fromCode := from.CurrencyCode
-				toCode := to.CurrencyCode
 				rate, ok := seedData.ExchangeRates[fromCode][toCode]
 				if !ok {
-					fmt.Printf("  No exchange rate found for %s → %s\n", fromCode, toCode)
+					printResult("Transfer failed", fmt.Errorf("no exchange rate for %s → %s", fromCode, toCode))
 					return
 				}
-
-				resp, err := from.Transfer(to, op.Amount, rate)
-				printResult(resp.Message, err)
+				resp, opErr = bank.Transfer(op.FromAccountID, op.ToAccountID, op.Amount, rate)
 
 			case "apply_interest":
 				time.Sleep(10 * time.Millisecond)
-				sacc, ok := savingsAccounts[op.AccountID]
-				if !ok {
-					fmt.Printf("  Savings account %s not found\n", op.AccountID)
-					return
-				}
-				resp, err := sacc.ApplyDailyInterest()
-				printResult(resp.Message, err)
+				resp, opErr = bank.ApplyDailyInterest(op.AccountID)
+
+			default:
+				printResult("", fmt.Errorf("unknown operation: %s", op.Type))
+				return
 			}
+
+			printResult(resp.Message, opErr)
 		}(op)
 	}
 
@@ -162,10 +150,10 @@ func main() {
 	fmt.Println("            REPORTS                ")
 	fmt.Println("═══════════════════════════════════")
 
-	for _, acc := range savingsAccounts {
+	for _, acc := range bank.SavingsAccounts {
 		systems.ReportSystem(acc)
 	}
-	for _, acc := range currentAccounts {
+	for _, acc := range bank.CurrentAccounts {
 		systems.ReportSystem(acc)
 	}
 
@@ -173,13 +161,50 @@ func main() {
 	fmt.Println("           AUDIT LOGS              ")
 	fmt.Println("═══════════════════════════════════")
 
-	for _, acc := range savingsAccounts {
+	for _, acc := range bank.SavingsAccounts {
 		fmt.Printf("\n— %s (%s) —\n", acc.Name, acc.AccountID)
 		systems.AuditSystem(acc)
 	}
-	for _, acc := range currentAccounts {
+	for _, acc := range bank.CurrentAccounts {
 		fmt.Printf("\n— %s (%s) —\n", acc.Name, acc.AccountID)
 		systems.AuditSystem(acc)
+	}
+
+	fmt.Println("\n═══════════════════════════════════")
+	fmt.Println("        TRANSACTION LEDGER         ")
+	fmt.Println("═══════════════════════════════════")
+
+	// Print ledger entries per account
+	allAccountIDs := make([]string, 0, len(bank.SavingsAccounts)+len(bank.CurrentAccounts))
+	for id := range bank.SavingsAccounts {
+		allAccountIDs = append(allAccountIDs, id)
+	}
+	for id := range bank.CurrentAccounts {
+		allAccountIDs = append(allAccountIDs, id)
+	}
+
+	for _, accountID := range allAccountIDs {
+		records, err := bank.Ledger.AccountTransactions(accountID)
+		if err != nil {
+			fmt.Printf("\n— Account %s —\n  (no transactions recorded)\n", accountID)
+			continue
+		}
+		fmt.Printf("\n— Account %s (%d transactions) —\n", accountID, len(records))
+		for _, r := range records {
+			status := "✓"
+			if !r.Success {
+				status = "✗"
+			}
+			fmt.Printf("  %s [%s] %-16s | amount: %8d | %8d → %8d | %s\n",
+				status,
+				r.Timestamp.Format(time.RFC3339),
+				r.OperationType,
+				r.Amount,
+				r.BalanceBefore,
+				r.BalanceAfter,
+				r.Note,
+			)
+		}
 	}
 }
 
@@ -193,9 +218,14 @@ func printResult(message string, err error) {
 				fundErr.Deficit, fundErr.AccountID)
 			return
 		}
+		var lockedErr *domain.AccountLockedError
+		if errors.As(err, &lockedErr) {
+			fmt.Printf("  ✗ Account locked — %s (account %s)\n",
+				lockedErr.Reason, lockedErr.AccountID)
+			return
+		}
 		fmt.Printf("  ✗ %s\n", err)
 		return
-	} else {
-		fmt.Printf("  ✓ %s\n", message)
 	}
+	fmt.Printf("  ✓ %s\n", message)
 }

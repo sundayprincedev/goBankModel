@@ -25,6 +25,17 @@ type Bank struct {
 	Ledger          *TransactionLedger
 }
 
+// Bank Initialiser
+func NewBank() *Bank {
+	return &Bank{
+		SavingsAccounts: make(map[string]*SavingsAccount),
+		CurrentAccounts: make(map[string]*CurrentAccount),
+		Customers:       make(map[string]*Customer),
+		Staff:           make(map[string]*Staff),
+		Ledger:          NewTransactionLedger(),
+	}
+}
+
 // Helper
 func (b *Bank) recordAndReturn(accountID, opType string, amount float64, accBalanceBefore, accBalanceAfter int64, curr currency.Currency, resp methodResponse, err error) (methodResponse, error) {
 	b.Ledger.RecordTransaction(TransactionRecord{
@@ -46,6 +57,7 @@ func (b *Bank) recordAndReturn(accountID, opType string, amount float64, accBala
 	return resp, err
 }
 
+// Methods
 func (b *Bank) Deposit(accountID string, amount float64) (methodResponse, error) {
 	if acc, ok := b.SavingsAccounts[accountID]; ok {
 		before := acc.Balance
