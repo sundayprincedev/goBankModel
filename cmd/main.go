@@ -24,7 +24,7 @@ func main() {
 
 	bank := domain.NewBank()
 
-	// Load customers and accounts into the bank
+	// Load customers and accounts
 	for _, seedCustomer := range seedData.Customers {
 		customer := &domain.Customer{
 			Name:       seedCustomer.Name,
@@ -72,7 +72,7 @@ func main() {
 		}
 	}
 
-	// Load staff into the bank
+	// Load staff
 	for _, seedStaff := range seedData.Staff {
 		staff := &domain.Staff{
 			StaffID:       seedStaff.StaffID,
@@ -92,7 +92,11 @@ func main() {
 		wg.Add(1)
 		go func(op data.SeedOperation) {
 			defer wg.Done()
+
 			fmt.Printf("\n▶ %s", op.Type)
+			if op.StaffID != "" {
+				fmt.Printf(" [%s]", op.StaffID)
+			}
 			if op.Note != "" {
 				fmt.Printf(" (%s)", op.Note)
 			}
@@ -135,6 +139,10 @@ func main() {
 				time.Sleep(10 * time.Millisecond)
 				resp, opErr = bank.ApplyDailyInterest(op.AccountID)
 
+			case "pay_salary":
+				time.Sleep(10 * time.Millisecond)
+				resp, opErr = bank.PayStaffSalary(op.StaffID)
+
 			default:
 				printResult("", fmt.Errorf("unknown operation: %s", op.Type))
 				return
@@ -174,7 +182,6 @@ func main() {
 	fmt.Println("        TRANSACTION LEDGER         ")
 	fmt.Println("═══════════════════════════════════")
 
-	// Print ledger entries per account
 	allAccountIDs := make([]string, 0, len(bank.SavingsAccounts)+len(bank.CurrentAccounts))
 	for id := range bank.SavingsAccounts {
 		allAccountIDs = append(allAccountIDs, id)
@@ -205,6 +212,39 @@ func main() {
 				r.Note,
 			)
 		}
+	}
+
+	fmt.Println("\n═══════════════════════════════════")
+	fmt.Println("         SALARY AUDIT              ")
+	fmt.Println("═══════════════════════════════════")
+
+	for _, staff := range bank.Staff {
+		status := "NEVER PAID"
+		if !staff.LastSalaryPaidAt.IsZero() {
+			status = fmt.Sprintf("last paid %s (%d units)",
+				staff.LastSalaryPaidAt.Format(time.RFC3339),
+				staff.LastSalaryPaidAmount)
+		}
+
+		warning := ""
+		if staff.LastSalaryPaidAmount != 0 && staff.LastSalaryPaidAmount != staff.SalaryValue {
+			warning = fmt.Sprintf(" ⚠ MISMATCH: expected %d, got %d",
+				staff.SalaryValue, staff.LastSalaryPaidAmount)
+		}
+
+		records, _ := bank.Ledger.AccountTransactions(staff.BankAccountID)
+		salaryCredits := 0
+		totalPaid := int64(0)
+		for _, r := range records {
+			if r.OperationType == "salary_credit" && r.Success {
+				salaryCredits++
+				totalPaid += r.Amount
+			}
+		}
+
+		fmt.Printf("\n  %s (%s) — %s\n", staff.Name, staff.Position, status)
+		fmt.Printf("    Account: %s | Salary: %d | Credits: %d | Total Paid: %d%s\n",
+			staff.BankAccountID, staff.SalaryValue, salaryCredits, totalPaid, warning)
 	}
 }
 

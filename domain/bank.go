@@ -163,3 +163,77 @@ func (b *Bank) ApplyDailyInterest(accountID string) (methodResponse, error) {
 
 	return resp, err
 }
+
+//Staff
+
+func (b *Bank) PayStaffSalary(staffID string) (methodResponse, error) {
+	staff, ok := b.Staff[staffID]
+	if !ok {
+		return methodResponse{}, fmt.Errorf("staff %s not found", staffID)
+	}
+
+	if staff.SalaryValue <= 0 {
+		return methodResponse{}, fmt.Errorf("staff %s has invalid salary: %d", staffID, staff.SalaryValue)
+	}
+
+	acc, ok := b.CurrentAccounts[staff.BankAccountID]
+	if !ok {
+		sacc, ok := b.SavingsAccounts[staff.BankAccountID]
+		if !ok {
+			return methodResponse{}, fmt.Errorf("bank account %s for staff %s not found", staff.BankAccountID, staffID)
+		}
+		before := sacc.Balance
+		resp, err := sacc.Deposit(float64(staff.SalaryValue))
+
+		b.Ledger.RecordTransaction(TransactionRecord{
+			TransactionID: util.GenerateTransactionID(),
+			AccountID:     staff.BankAccountID,
+			OperationType: "salary_credit",
+			Amount:        staff.SalaryValue,
+			BalanceBefore: before,
+			BalanceAfter:  sacc.Balance,
+			Timestamp:     time.Now(),
+			Success:       err == nil,
+			Note: func() string {
+				if err != nil {
+					return fmt.Sprintf("salary payment failed for %s (%s): %s", staff.Name, staff.Position, err.Error())
+				}
+				return fmt.Sprintf("salary paid to %s (%s)", staff.Name, staff.Position)
+			}(),
+		})
+
+		if err != nil {
+			return resp, err
+		}
+		staff.LastSalaryPaidAt = time.Now()
+		staff.LastSalaryPaidAmount = staff.SalaryValue
+		return resp, nil
+	}
+
+	before := acc.Balance
+	resp, err := acc.Deposit(float64(staff.SalaryValue))
+
+	b.Ledger.RecordTransaction(TransactionRecord{
+		TransactionID: util.GenerateTransactionID(),
+		AccountID:     staff.BankAccountID,
+		OperationType: "salary_credit",
+		Amount:        staff.SalaryValue,
+		BalanceBefore: before,
+		BalanceAfter:  acc.Balance,
+		Timestamp:     time.Now(),
+		Success:       err == nil,
+		Note: func() string {
+			if err != nil {
+				return fmt.Sprintf("salary payment failed for %s (%s): %s", staff.Name, staff.Position, err.Error())
+			}
+			return fmt.Sprintf("salary paid to %s (%s)", staff.Name, staff.Position)
+		}(),
+	})
+
+	if err != nil {
+		return resp, err
+	}
+	staff.LastSalaryPaidAt = time.Now()
+	staff.LastSalaryPaidAmount = staff.SalaryValue
+	return resp, nil
+}

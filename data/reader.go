@@ -35,6 +35,7 @@ type SeedOperation struct {
 	FromAccountID string  `json:"from_account_id"`
 	ToAccountID   string  `json:"to_account_id"`
 	Amount        float64 `json:"amount"`
+	StaffID       string  `json:"staff_id"`
 	Note          string  `json:"note"`
 }
 

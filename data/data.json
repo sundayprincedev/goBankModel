@@ -124,6 +124,31 @@
   ],
   "operations": [
     {
+      "type": "pay_salary",
+      "staff_id": "STAFF-001",
+      "note": "Chidi monthly salary"
+    },
+    {
+      "type": "pay_salary",
+      "staff_id": "STAFF-002",
+      "note": "Sarah monthly salary"
+    },
+    {
+      "type": "pay_salary",
+      "staff_id": "STAFF-003",
+      "note": "David monthly salary"
+    },
+    {
+      "type": "pay_salary",
+      "staff_id": "STAFF-999",
+      "note": "non-existent staff — should fail with not found"
+    },
+    {
+      "type": "pay_salary",
+      "staff_id": "STAFF-001",
+      "note": "duplicate pay same cycle — test idempotency awareness"
+    },
+    {
       "type": "deposit",
       "account_id": "ACC-001",
       "amount": 50000.0,
